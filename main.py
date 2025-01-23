@@ -128,7 +128,7 @@ def create_spark_session():
 
 def get_warehouse_connection():
     """Get database connection string from environment variables."""
-    return f"postgresql://{os.getenv('POSTGRES_DB', 'adform_user')}:{os.getenv('POSTGRES_PASSWORD', 'adform_pass')}" \
+    return f"postgresql://{os.getenv('POSTGRES_USER', 'adform_user')}:{os.getenv('POSTGRES_PASSWORD', 'adform_pass')}" \
            f"@{os.getenv('DB_HOST', 'localhost')}:{os.getenv('DB_PORT', '5433')}" \
            f"/{os.getenv('POSTGRES_DB', 'adform_db')}"
 
@@ -284,7 +284,7 @@ def main(args=None):
                 logger.info("Spark Session stopped")
 
     except Exception as e:
-        logger.exception(f"Critical error during execution: {str(e)}")
+        logging.exception(f"Critical error during execution: {str(e)}")
         sys.exit(1)
 
 

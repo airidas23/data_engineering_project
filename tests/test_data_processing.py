@@ -37,7 +37,7 @@ class TestDataProcessor(unittest.TestCase):
 
     def test_extract_date_from_filename_valid(self):
         filename = "prefix_impressions_processed_dk_20220527113145108.parquet"
-        expected_date = "2022-05-27"
+        expected_date = "202205271131"
         result = self.data_processor._extract_date_from_filename(filename)
         self.assertEqual(result, expected_date)
 

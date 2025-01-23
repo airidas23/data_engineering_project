@@ -375,7 +375,7 @@ class DataProcessor:
             datetime_part = parts[3]  # e.g., 20220527113145108
             date_str = datetime_part[:8]  # 20220527
             date_obj = datetime.strptime(date_str, '%Y%m%d')
-            return date_obj.strftime('%Y-%m-%d')  # Return only date part
+            return date_str  # Return only date part
         except Exception as e:
             self.logger.error(
                 f"Error extracting date from filename {filename}: {str(e)}")
