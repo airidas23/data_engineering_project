@@ -77,6 +77,14 @@ adform_spark_app/
    DB_HOST=localhost
    DB_PORT=5433
    ```
+   
+### 🏃 Running the Application
+1. **Place input parquet files** in the raw_data directory
+2. **Run the application**:
+   ```bash
+    python main.py --user-agent "some user agent"
+   ```
+
 ### 🍎 macOS/Linux Setup
 1. Install Prerequisites:
    ```bash
