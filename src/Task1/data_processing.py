@@ -343,7 +343,8 @@ class DataProcessor:
                 "click_count") > F.col("impression_count")
             if not result_df.filter(clicks_exceed_mask).rdd.isEmpty():
                 self.logger.warning(
-                    "Found records where clicks exceed impressions:")
+                    f"Found records where clicks exceed impressions: {date}"
+                )
                 result_df.filter(clicks_exceed_mask).show()
 
                 # Set impressions equal to clicks where clicks are higher
@@ -375,11 +376,34 @@ class DataProcessor:
             datetime_part = parts[3]  # e.g., 20220527113145108
             date_str = datetime_part[:8]  # 20220527
             date_obj = datetime.strptime(date_str, '%Y%m%d')
-            return date_str  # Return only date part
+            return date_obj.strftime('%Y-%m-%d')  # Return only date part
         except Exception as e:
             self.logger.error(
                 f"Error extracting date from filename {filename}: {str(e)}")
             raise
+
+    # def _extract_date_from_filename(self, filename: str) -> str:
+    #     """Extract date in 'YYYYMMDD' format from filename."""
+    #     try:
+    #         # Look for the date pattern directly using the known format
+    #         datetime_pattern = r'_(\d{14})'  # Matches _YYYYMMDDHHMMSS
+    #         import re
+    #         match = re.search(datetime_pattern, filename)
+    #         if not match:
+    #             raise ValueError(
+    #                 f"Could not find date pattern in filename: {filename}")
+    #
+    #         datetime_part = match.group(1)  # e.g., 20220527113145108
+    #         date_str = datetime_part[:8]  # Extract YYYYMMDD
+    #
+    #         # Validate that this is actually a valid date
+    #         date_obj = datetime.strptime(date_str, '%Y%m%d')
+    #         return date_str
+    #
+    #     except Exception as e:
+    #         self.logger.error(
+    #             f"Error extracting date from filename {filename}: {str(e)}")
+    #         raise
 
     def _write_output(self, df: DataFrame, output_path: str, date: str) -> str:
         """

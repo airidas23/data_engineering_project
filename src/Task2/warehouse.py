@@ -183,6 +183,66 @@ class ClientReportETL:
             invalid_records=problematic_records if not problematic_records.empty else None
         )
 
+    def _handle_click_impression_mismatch(self, df: pd.DataFrame, source_file: str) -> Tuple[pd.DataFrame, List[Dict]]:
+        """
+        Handle cases where clicks exceed impressions or exist without impressions.
+        Returns corrected dataframe and list of issues for logging.
+        """
+        issues = []
+        df_copy = df.copy()
+
+        # Find records where clicks exist but impressions are 0
+        zero_impressions_mask = (df_copy['impression_count'] == 0) & (
+            df_copy['click_count'] > 0)
+        if zero_impressions_mask.any():
+            for _, row in df_copy[zero_impressions_mask].iterrows():
+                issues.append({
+                    'date': pd.to_datetime(row['date']).date(),
+                    'hour': row['hour'],
+                    'impression_count': row['impression_count'],
+                    'click_count': row['click_count'],
+                    'issue_type': 'clicks_without_impressions',
+                    'resolution': 'set_impressions_equal_to_clicks' if self.auto_correct else 'flagged',
+                    'source_file': source_file
+                })
+
+            if self.auto_correct:
+                # Set impressions equal to clicks where impressions are 0
+                df_copy.loc[zero_impressions_mask, 'impression_count'] = df_copy.loc[
+                    zero_impressions_mask, 'click_count'
+                ]
+                self.logger.warning(
+                    f"Auto-corrected {zero_impressions_mask.sum()} records with "
+                    "clicks but no impressions"
+                )
+
+        # Find records where clicks exceed impressions
+        excess_clicks_mask = (df_copy['click_count'] > df_copy['impression_count']) & (
+            df_copy['impression_count'] > 0)
+        if excess_clicks_mask.any():
+            for _, row in df_copy[excess_clicks_mask].iterrows():
+                issues.append({
+                    'date': pd.to_datetime(row['date']).date(),
+                    'hour': row['hour'],
+                    'impression_count': row['impression_count'],
+                    'click_count': row['click_count'],
+                    'issue_type': 'clicks_exceed_impressions',
+                    'resolution': 'set_clicks_equal_to_impressions' if self.auto_correct else 'flagged',
+                    'source_file': source_file
+                })
+
+            if self.auto_correct:
+                # Set clicks equal to impressions where they exceed
+                df_copy.loc[excess_clicks_mask, 'click_count'] = df_copy.loc[
+                    excess_clicks_mask, 'impression_count'
+                ]
+                self.logger.warning(
+                    f"Auto-corrected {excess_clicks_mask.sum()} records where "
+                    "clicks exceeded impressions"
+                )
+
+        return df_copy, issues
+
     def store_invalid_records(self, invalid_records: pd.DataFrame):
         """Store invalid records in the invalid records table for later analysis."""
         try:
@@ -228,9 +288,9 @@ class ClientReportETL:
                 axis=1
             )
 
-            # Format datetime to string with desired format
+            # Convert datetime to string format
             prepared_df['datetime'] = prepared_df['datetime'].dt.strftime(
-                '%Y-%m-%d %H:00:00')
+                '%Y-%m-%d %H:%M:%S')
 
             # Drop the original date and hour columns
             prepared_df = prepared_df.drop(['date', 'hour'], axis=1)
