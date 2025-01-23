@@ -148,7 +148,7 @@ class DataProcessor:
 
                 impressions_df = self._process_file_type(impressions_df, date)
 
-            # Process clicks similarly...
+            # Process clicks similarly
             clicks_df = None
             if click_files:
                 click_paths = [os.path.join(input_path, f)
@@ -381,29 +381,6 @@ class DataProcessor:
             self.logger.error(
                 f"Error extracting date from filename {filename}: {str(e)}")
             raise
-
-    # def _extract_date_from_filename(self, filename: str) -> str:
-    #     """Extract date in 'YYYYMMDD' format from filename."""
-    #     try:
-    #         # Look for the date pattern directly using the known format
-    #         datetime_pattern = r'_(\d{14})'  # Matches _YYYYMMDDHHMMSS
-    #         import re
-    #         match = re.search(datetime_pattern, filename)
-    #         if not match:
-    #             raise ValueError(
-    #                 f"Could not find date pattern in filename: {filename}")
-    #
-    #         datetime_part = match.group(1)  # e.g., 20220527113145108
-    #         date_str = datetime_part[:8]  # Extract YYYYMMDD
-    #
-    #         # Validate that this is actually a valid date
-    #         date_obj = datetime.strptime(date_str, '%Y%m%d')
-    #         return date_str
-    #
-    #     except Exception as e:
-    #         self.logger.error(
-    #             f"Error extracting date from filename {filename}: {str(e)}")
-    #         raise
 
     def _write_output(self, df: DataFrame, output_path: str, date: str) -> str:
         """

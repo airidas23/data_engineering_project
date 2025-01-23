@@ -1,5 +1,4 @@
-#!/usr/bin/env python3
-
+# Description: This script is used to verify the setup of the project by checking the project structure, Python environment, Docker setup, database connection, and Spark setup. It is used to ensure that the project is set up correctly before running the main script.
 import os
 import subprocess
 import sys
@@ -24,14 +23,14 @@ logger = logging.getLogger(__name__)
 
 class SetupVerification:
     def __init__(self):
-        self.project_root = Path(__file__).parent
+        self.project_root = Path.cwd()
         # Core project structure
         self.required_dirs = [
             'docker/init',
             'hadoop/bin',
             'logs',
-            # 'output/raw_data',
-            'src/etl',
+            'output/raw_data',
+            'src/Task2',
             'src/models',
             'tests'
         ]
@@ -118,7 +117,7 @@ class SetupVerification:
             return True
 
         except Exception as e:
-            logger.error(f"Database check failed: {str(e)}")
+            logger.error(f"Database check failed: {e}")
             return False
 
     def check_docker(self):
@@ -159,7 +158,8 @@ class SetupVerification:
 
             # Check if our container is running
             result = subprocess.run(
-                ['docker', 'ps', '--filter', 'name=adform_warehouse', '--format', '{{.Status}}'],
+                ['docker', 'ps', '--filter', 'name=adform_warehouse',
+                    '--format', '{{.Status}}'],
                 capture_output=True,
                 text=True
             )
@@ -167,10 +167,12 @@ class SetupVerification:
             container_status = result.stdout.strip()
 
             if not container_status:
-                logger.info("PostgreSQL container not found - starting new container...")
+                logger.info(
+                    "PostgreSQL container not found - starting new container...")
                 return self._start_postgres_container()
             elif not container_status.startswith('Up'):
-                logger.info("PostgreSQL container is not running - restarting...")
+                logger.info(
+                    "PostgreSQL container is not running - restarting...")
                 return self._start_postgres_container()
             else:
                 logger.info("PostgreSQL container is running")
@@ -202,12 +204,15 @@ class SetupVerification:
                 conn.close()
                 logger.info("PostgreSQL container is healthy")
                 return True
-            except psycopg2.Error:
+            except psycopg2.Error as e:
+                logger.error(f"PostgreSQL connection attempt failed: {str(e)}")
                 if attempt < max_retries - 1:
-                    logger.info(f"Waiting for PostgreSQL to be ready... ({attempt + 1}/{max_retries})")
+                    logger.info(
+                        f"Waiting for PostgreSQL to be ready... ({attempt + 1}/{max_retries})")
                     time.sleep(retry_delay)
                 else:
-                    logger.error("PostgreSQL health check failed after maximum retries")
+                    logger.error(
+                        "PostgreSQL health check failed after maximum retries")
                     return False
 
     def _start_postgres_container(self):

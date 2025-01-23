@@ -8,17 +8,15 @@ from unittest.mock import patch
 
 import pandas as pd
 import logging
-from datetime import datetime
 
 from pyspark import Row, SparkConf
 from pyspark.sql.session import SparkSession
 from pyspark.sql.types import StructType, StructField, IntegerType
 from sqlalchemy import create_engine
-from sqlalchemy.exc import SQLAlchemyError
 
 from config import INPUT_PATH, OUTPUT_PATH, LOG_PATH
-from src.data_processing import DataProcessor
-from src.etl.warehouse import ClientReportETL
+from src.Task1.data_processing import DataProcessor
+from src.Task2.warehouse import ClientReportETL
 from src.utils import get_logger
 
 
@@ -155,11 +153,12 @@ class TestClientReportETL(unittest.TestCase):
             prepared_df['click_count']))
 
 
-class TestDataProcessor(unittest.TestCase):
+class TestCombineAndFillHours(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # Start patching subprocess.run
-        cls.patcher = patch('subprocess.run', return_value=subprocess.CompletedProcess(args=[], returncode=0))
+        cls.patcher = patch('subprocess.run', return_value=subprocess.CompletedProcess(
+            args=[], returncode=0))
         cls.mock_subprocess_run = cls.patcher.start()
 
         try:
@@ -228,7 +227,8 @@ class TestDataProcessor(unittest.TestCase):
     def setup_hadoop_env(cls):
         """Setup Hadoop environment similar to main.py."""
         # Set up base paths
-        base_dir = Path(__file__).parent.parent.parent  # Adjust as per directory structure
+        # Adjust as per directory structure
+        base_dir = Path(__file__).parent.parent.parent
         hadoop_home = base_dir / "hadoop"
 
         # Create necessary directories
@@ -243,19 +243,13 @@ class TestDataProcessor(unittest.TestCase):
         # Additional Hadoop settings
         os.environ['HADOOP_OPTS'] = "-Djava.library.path=%HADOOP_HOME%\\bin"
 
-        # # Verify winutils.exe
-        # winutils_path = hadoop_home / "bin" / "winutils.exe"
-        # if not winutils_path.exists():
-        #     raise FileNotFoundError(
-        #         f"winutils.exe not found at {winutils_path}. "
-        #         "Please download it from https://github.com/cdarlint/winutils"
-        #     )
-
     @classmethod
     def ensure_directories(cls):
         """Ensure required directories exist with proper permissions."""
-        input_path = Path(INPUT_PATH)  # Ensure INPUT_PATH is correctly imported
-        output_path = Path(OUTPUT_PATH)  # Ensure OUTPUT_PATH is correctly imported
+        input_path = Path(
+            INPUT_PATH)  # Ensure INPUT_PATH is correctly imported
+        # Ensure OUTPUT_PATH is correctly imported
+        output_path = Path(OUTPUT_PATH)
         log_path = Path(LOG_PATH)  # Ensure LOG_PATH is correctly imported
 
         for path in [input_path, output_path, log_path.parent]:
@@ -269,7 +263,8 @@ class TestDataProcessor(unittest.TestCase):
                         "chmod", "777", str(path.resolve())
                     ], check=True)
             except Exception as e:
-                cls.logger.warning(f"Could not set permissions for {path}: {e}")
+                cls.logger.warning(
+                    f"Could not set permissions for {path}: {e}")
 
     @classmethod
     def create_spark_session(cls):
@@ -306,7 +301,8 @@ class TestDataProcessor(unittest.TestCase):
         # Port and logging settings
         conf.set("spark.ui.port", "4050")
         if os.name == "nt" and os.environ.get('HADOOP_HOME'):
-            input_path = Path(INPUT_PATH)  # Ensure INPUT_PATH is correctly imported
+            # Ensure INPUT_PATH is correctly imported
+            input_path = Path(INPUT_PATH)
             subprocess.run([
                 str(Path(os.environ['HADOOP_HOME']) / "bin" / "winutils.exe"),
                 "chmod", "777", str(input_path.resolve())
@@ -370,10 +366,12 @@ class TestDataProcessor(unittest.TestCase):
 
         # Verify DataFrames are correctly created
         impressions_count = impressions_df.count()
-        self.assertEqual(impressions_count, 1, "Impressions DataFrame should contain 1 row.")
+        self.assertEqual(impressions_count, 1,
+                         "Impressions DataFrame should contain 1 row.")
 
         clicks_count = clicks_df.count()
-        self.assertEqual(clicks_count, 2, "Clicks DataFrame should contain 2 rows.")
+        self.assertEqual(
+            clicks_count, 2, "Clicks DataFrame should contain 2 rows.")
 
         # Call _combine_and_fill_hours with the simulated data
         try:

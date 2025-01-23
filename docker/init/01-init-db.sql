@@ -1,4 +1,3 @@
--- docker/init/01-init-db.sql
 -- Create schema
 CREATE SCHEMA IF NOT EXISTS adform_dw;
 

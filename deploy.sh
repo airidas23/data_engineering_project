@@ -33,7 +33,7 @@ fi
 
 # Start PostgreSQL container
 echo "🐘 Starting PostgreSQL container..."
-docker-compose down 2>/dev/null || true  # Stop if running, ignore errors
+docker-compose down 2>/dev/null || true
 docker-compose up -d
 
 # Wait for PostgreSQL to be ready

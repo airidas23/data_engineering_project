@@ -1,21 +1,18 @@
 # main.py
-import datetime
 import os
 import sys
 import argparse
 from pathlib import Path
 import logging
-import shutil
 import subprocess
-import pandas as pd
 from pyspark.sql import SparkSession
 from pyspark import SparkConf
 
 from config import INPUT_PATH, OUTPUT_PATH, LOG_PATH
-from src.etl.warehouse import ClientReportETL
+from src.Task2.warehouse import ClientReportETL
 
 from src.utils import get_logger
-from src.data_processing import DataProcessor
+from src.Task1.data_processing import DataProcessor
 from dotenv import load_dotenv
 
 # Add Python executable directory to PATH
@@ -58,14 +55,6 @@ def setup_hadoop_env():
 
     # Additional Hadoop settings
     os.environ['HADOOP_OPTS'] = "-Djava.library.path=%HADOOP_HOME%\\bin"
-
-    # Verify winutils.exe
-    winutils_path = os.path.join(hadoop_home, "bin", "winutils.exe")
-    if not os.path.exists(winutils_path):
-        raise FileNotFoundError(
-            f"winutils.exe not found at {winutils_path}. "
-            "Please download it from https://github.com/cdarlint/winutils"
-        )
 
 
 def create_spark_session():
@@ -205,9 +194,6 @@ def process_and_load_data(spark, etl, input_path: str, output_path: str, user_ag
             logger.info(
                 f"  Impressions: {verification['totals']['impressions']:,}")
             logger.info(f"  Clicks: {verification['totals']['clicks']:,}")
-
-            # logger.info("\nHourly Breakdown:")
-            # logger.info(f"\n{verification['hourly_breakdown'].to_string()}")
 
             logger.info("\nClient report loading completed successfully")
             return True

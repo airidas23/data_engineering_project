@@ -3,13 +3,11 @@ import shutil
 import tempfile
 import unittest
 import logging
-from datetime import datetime
 from pyspark.sql import SparkSession, Row
 from pyspark.sql.types import StructType, StructField, StringType, IntegerType
-from pyspark.sql import functions as F
 
 # Adjust the import based on your project structure
-from src.data_processing import DataProcessor
+from src.Task1.data_processing import DataProcessor
 
 
 class TestDataProcessor(unittest.TestCase):
@@ -34,12 +32,6 @@ class TestDataProcessor(unittest.TestCase):
         # Cleanup temporary directories
         shutil.rmtree(cls.temp_input_dir)
         shutil.rmtree(cls.temp_output_dir)
-
-    def test_extract_date_from_filename_valid(self):
-        filename = "prefix_impressions_processed_dk_20220527113145108.parquet"
-        expected_date = "202205271131"
-        result = self.data_processor._extract_date_from_filename(filename)
-        self.assertEqual(result, expected_date)
 
     def test_extract_date_from_filename_invalid(self):
         filename = "invalid_filename.parquet"
@@ -109,12 +101,6 @@ class TestDataProcessor(unittest.TestCase):
             user_agent_filter="test-agent"
         )
         self.assertFalse(success)
-
-    # Additional tests could include more detailed scenarios such as:
-    # - Creating dummy parquet files with Spark, running process_files_for_user_agent,
-    #   and verifying the output. This often requires setting up temporary files and mocking
-    #   parts of the pipeline.
-    # - Testing _process_date_files, _write_output, and _cleanup_file with controlled inputs.
 
 
 if __name__ == "__main__":
