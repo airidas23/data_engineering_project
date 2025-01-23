@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:14
+    container_name: adform_warehouse
+    environment:
+      POSTGRES_DB: adform_db
+      POSTGRES_USER: adform_user
+      POSTGRES_PASSWORD: adform_pass
+
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U adform_user -d adform_db" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+volumes:
+  postgres_data:

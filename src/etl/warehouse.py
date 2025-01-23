@@ -1,0 +1,398 @@
+# src/etl/client_report.py
+import logging
+from pathlib import Path
+from datetime import datetime
+import pandas as pd
+from sqlalchemy import create_engine, text
+from sqlalchemy.exc import SQLAlchemyError
+import numpy as np
+from typing import Optional, List, Dict, Tuple
+
+import logging
+from pathlib import Path
+from datetime import datetime
+import pandas as pd
+from sqlalchemy import create_engine, text
+from sqlalchemy.exc import SQLAlchemyError
+import numpy as np
+from typing import Optional, List, Dict, Tuple
+from dataclasses import dataclass
+
+
+@dataclass
+class ValidationResult:
+    """Container for validation results with detailed information about data quality issues."""
+    is_valid: bool
+    errors: List[str]
+    warnings: List[str]
+    invalid_records: Optional[pd.DataFrame] = None
+
+
+class ClientReportETL:
+    def __init__(self, connection_string: str, logger: logging.Logger, auto_correct: bool = False):
+        """
+        Initialize ETL with database connection and logging.
+
+        Args:
+            connection_string: Database connection string
+            logger: Logger instance for recording operations
+            auto_correct: If True, automatically correct data quality issues where possible
+        """
+        self.engine = create_engine(
+            connection_string,
+            pool_size=5,
+            pool_recycle=1800
+        )
+        self.logger = logger
+        self.auto_correct = auto_correct
+        self._ensure_schema()
+
+    def _ensure_schema(self):
+        """Ensure required database objects exist."""
+        try:
+            with self.engine.begin() as conn:
+                # Create schema if not exists
+                conn.execute(text("CREATE SCHEMA IF NOT EXISTS adform_dw;"))
+
+                # Create main table if not exists
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS adform_dw.client_report (
+                        datetime TIMESTAMP NOT NULL,
+                        impression_count BIGINT NOT NULL,
+                        click_count BIGINT NOT NULL,
+                        audit_loaded_datetime TIMESTAMP NOT NULL,
+                        PRIMARY KEY (datetime)
+                    );
+                """))
+
+                # Create archive table if not exists
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS adform_dw.client_report_archive (
+                        LIKE adform_dw.client_report INCLUDING ALL
+                    );
+                """))
+
+                # Create invalid records table for tracking problematic data
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS adform_dw.client_report_invalid (
+                        datetime TIMESTAMP NOT NULL,
+                        impression_count BIGINT NOT NULL,
+                        click_count BIGINT NOT NULL,
+                        audit_loaded_datetime TIMESTAMP NOT NULL,
+                        validation_error TEXT NOT NULL,
+                        source_file TEXT NOT NULL,
+                        PRIMARY KEY (datetime, source_file)
+                    );
+                """))
+
+                # Create index if not exists
+                conn.execute(text("""
+                    CREATE INDEX IF NOT EXISTS idx_client_report_datetime
+                    ON adform_dw.client_report(datetime);
+                """))
+
+                self.logger.info(
+                    "Database schema and tables verified/created successfully")
+
+        except SQLAlchemyError as e:
+            self.logger.error(f"Error ensuring schema: {str(e)}")
+            raise
+
+    def validate_data(self, df: pd.DataFrame, source_file: str) -> ValidationResult:
+        """
+        Validate the input DataFrame against business rules and data quality checks.
+
+        Args:
+            df: Input DataFrame to validate
+            source_file: Name of the source file for error tracking
+
+        Returns:
+            ValidationResult object containing validation status and details
+        """
+        errors = []
+        warnings = []
+        invalid_records = []
+
+        # Check required columns
+        required_columns = {'datetime', 'impression_count', 'click_count'}
+        missing_columns = required_columns - set(df.columns)
+        if missing_columns:
+            errors.append(f"Missing required columns: {missing_columns}")
+            return ValidationResult(False, errors, warnings)
+
+        # Create a mask for problematic records
+        problematic_records = pd.DataFrame()
+
+        # Check for null values
+        null_mask = df[list(required_columns)].isnull().any(axis=1)
+        if null_mask.any():
+            problematic_records = pd.concat([
+                problematic_records,
+                df[null_mask].assign(validation_error='Contains null values')
+            ])
+            warnings.append(
+                f"Found {null_mask.sum()} records with null values")
+
+        # Check for negative values
+        negative_mask = (df['impression_count'] < 0) | (df['click_count'] < 0)
+        if negative_mask.any():
+            problematic_records = pd.concat([
+                problematic_records,
+                df[negative_mask].assign(
+                    validation_error='Contains negative values')
+            ])
+            warnings.append(
+                f"Found {negative_mask.sum()} records with negative values")
+
+        # Check for clicks exceeding impressions
+        invalid_clicks_mask = df['click_count'] > df['impression_count']
+        if invalid_clicks_mask.any():
+            invalid_clicks = df[invalid_clicks_mask].copy()
+            if self.auto_correct:
+                # Set clicks equal to impressions where they exceed
+                df.loc[invalid_clicks_mask, 'click_count'] = df.loc[
+                    invalid_clicks_mask, 'impression_count'
+                ]
+                warnings.append(
+                    f"Auto-corrected {invalid_clicks_mask.sum()} records where "
+                    "clicks exceeded impressions"
+                )
+            else:
+                problematic_records = pd.concat([
+                    problematic_records,
+                    invalid_clicks.assign(
+                        validation_error='Clicks exceed impressions'
+                    )
+                ])
+                warnings.append(
+                    f"Found {invalid_clicks_mask.sum()} records where clicks "
+                    "exceed impressions"
+                )
+
+        # Store invalid records if any were found
+        if not problematic_records.empty:
+            problematic_records['source_file'] = source_file
+            problematic_records['audit_loaded_datetime'] = datetime.now()
+
+        # Determine overall validation status
+        is_valid = len(errors) == 0
+        return ValidationResult(
+            is_valid=is_valid,
+            errors=errors,
+            warnings=warnings,
+            invalid_records=problematic_records if not problematic_records.empty else None
+        )
+
+    def store_invalid_records(self, invalid_records: pd.DataFrame):
+        """Store invalid records in the invalid records table for later analysis."""
+        try:
+            with self.engine.begin() as conn:
+                invalid_records.to_sql(
+                    'client_report_invalid',
+                    conn,
+                    schema='adform_dw',
+                    if_exists='append',
+                    index=False,
+                    method='multi'
+                )
+            self.logger.info(
+                f"Stored {len(invalid_records)} invalid records for later analysis"
+            )
+        except Exception as e:
+            self.logger.error(f"Error storing invalid records: {str(e)}")
+            raise
+
+    def prepare_data(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Prepare the DataFrame for loading into the database with proper datetime formatting.
+
+        Args:
+            df: Input DataFrame with 'date' and 'hour' columns
+
+        Returns:
+            Prepared DataFrame with properly formatted datetime column
+        """
+        # Create a copy to avoid modifying the input
+        prepared_df = df.copy()
+
+        try:
+            # Convert date strings to datetime objects
+            prepared_df['date'] = pd.to_datetime(prepared_df['date'])
+
+            # Combine date and hour into a properly formatted datetime
+            prepared_df['datetime'] = prepared_df.apply(
+                lambda row: pd.Timestamp.combine(
+                    row['date'].date(),
+                    pd.Timestamp(f"{int(row['hour']):02d}:00:00").time()
+                ),
+                axis=1
+            )
+
+            # Format datetime to string with desired format
+            prepared_df['datetime'] = prepared_df['datetime'].dt.strftime(
+                '%Y-%m-%d %H:00:00')
+
+            # Drop the original date and hour columns
+            prepared_df = prepared_df.drop(['date', 'hour'], axis=1)
+
+            # Convert numeric columns to appropriate types
+            prepared_df['impression_count'] = prepared_df['impression_count'].astype(
+                'int64')
+            prepared_df['click_count'] = prepared_df['click_count'].astype(
+                'int64')
+
+            # Add audit timestamp with proper formatting
+            prepared_df['audit_loaded_datetime'] = datetime.now().strftime(
+                '%Y-%m-%d %H:%M:%S')
+
+            # Sort by datetime for consistent loading
+            prepared_df.sort_values('datetime', inplace=True)
+
+            # Ensure we have only the required columns in the correct order
+            final_columns = ['datetime', 'impression_count',
+                             'click_count', 'audit_loaded_datetime']
+            prepared_df = prepared_df[final_columns]
+
+            self.logger.info(
+                f"Data prepared successfully. Shape: {prepared_df.shape}")
+            return prepared_df
+
+        except Exception as e:
+            self.logger.error(f"Error preparing data: {str(e)}")
+            self.logger.error("DataFrame columns: " + ", ".join(df.columns))
+            self.logger.error("Sample data:\n" + df.head().to_string())
+            raise
+
+    def load_data(self, input_path: Path) -> Dict[str, int]:
+        """
+        Load data from CSV file into the database, accumulating data from multiple files.
+        Each file's data is added to the client_report table without overwriting previous data.
+
+        Args:
+            input_path: Path to the CSV file to load
+
+        Returns:
+            Dictionary containing counts of archived and loaded rows
+        """
+        try:
+            self.logger.info(f"Reading file: {input_path}")
+
+            # Read CSV file
+            df = pd.read_csv(input_path)
+            self.logger.info(f"Read CSV with shape: {df.shape}")
+
+            # Prepare data
+            prepared_df = self.prepare_data(df)
+
+            # Load to database with safe archiving
+            with self.engine.begin() as conn:
+                # First, archive existing data for the dates in this file
+                min_date = prepared_df['datetime'].min()
+                max_date = prepared_df['datetime'].max()
+
+                # Archive records for the current date range
+                archive_query = text("""
+                    INSERT INTO adform_dw.client_report_archive (
+                        datetime, impression_count, click_count, audit_loaded_datetime
+                    )
+                    SELECT cr.datetime, cr.impression_count, cr.click_count, cr.audit_loaded_datetime
+                    FROM adform_dw.client_report cr
+                    WHERE cr.datetime BETWEEN :min_date AND :max_date
+                    AND NOT EXISTS (
+                        SELECT 1 
+                        FROM adform_dw.client_report_archive ca 
+                        WHERE ca.datetime = cr.datetime
+                    );
+                """)
+                archive_result = conn.execute(
+                    archive_query,
+                    {"min_date": min_date, "max_date": max_date}
+                )
+                archived_rows = archive_result.rowcount
+                self.logger.info(f"Archived {archived_rows} unique rows")
+
+                # Remove existing records for the current date range
+                delete_query = text("""
+                    DELETE FROM adform_dw.client_report
+                    WHERE datetime BETWEEN :min_date AND :max_date;
+                """)
+                conn.execute(delete_query, {
+                             "min_date": min_date, "max_date": max_date})
+
+                # Insert new data
+                prepared_df.to_sql(
+                    'client_report',
+                    conn,
+                    schema='adform_dw',
+                    if_exists='append',
+                    index=False,
+                    method='multi',
+                    chunksize=1000
+                )
+
+                # Verify loaded rows for this date range
+                verify_query = text("""
+                    SELECT COUNT(*) 
+                    FROM adform_dw.client_report
+                    ;
+                """)
+                loaded_rows = conn.execute(
+                    verify_query,
+                    {"min_date": min_date, "max_date": max_date}
+                ).scalar()
+
+                self.logger.info(f"Successfully loaded {loaded_rows} rows")
+                return {
+                    'archived_rows': archived_rows,
+                    'loaded_rows': loaded_rows
+                }
+
+        except Exception as e:
+            self.logger.error(f"Error loading data: {str(e)}")
+            raise
+
+    def verify_load(self) -> dict:
+        """Verify the data in client_report and return summary statistics."""
+        try:
+            with self.engine.connect() as conn:
+                # 1. Get total row count
+                row_count = conn.execute(text(
+                    "SELECT COUNT(*) FROM adform_dw.client_report"
+                )).scalar()
+
+                # 2. Get min/max datetime
+                date_range = conn.execute(text(
+                    """SELECT 
+                         MIN(datetime) AS earliest_date,
+                         MAX(datetime) AS latest_date
+                       FROM adform_dw.client_report"""
+                )).fetchone()
+
+                # 3. Get total impressions and clicks
+                totals = conn.execute(text(
+                    """SELECT 
+                         SUM(impression_count) as total_impressions,
+                         SUM(click_count) as total_clicks
+                       FROM adform_dw.client_report"""
+                )).fetchone()
+
+                # 4. Create a dictionary with verification info
+                verification = {
+                    'total_rows': row_count,
+                    'date_range': {
+                        'start': date_range.earliest_date,
+                        'end': date_range.latest_date
+                    },
+                    'totals': {
+                        'impressions': totals.total_impressions,
+                        'clicks': totals.total_clicks
+                    }
+                }
+
+                # Optionally log or do more checks
+                self.logger.info(f"Verification results: {verification}")
+                return verification
+
+        except SQLAlchemyError as e:
+            self.logger.error(f"Error verifying load: {str(e)}")
+            raise
