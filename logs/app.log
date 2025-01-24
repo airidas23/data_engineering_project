@@ -23887,3 +23887,185 @@ Total Counts:
 Client report loading completed successfully
 2025-01-23 21:04:48,307 - [INFO] - Processing and loading completed successfully
 2025-01-23 21:04:48,530 - [INFO] - Spark Session stopped
+2025-01-24 07:50:10,183 - [INFO] - Starting application...
+2025-01-24 07:50:10,298 - [ERROR] - Error ensuring schema: (psycopg2.OperationalError) connection to server at "localhost" (::1), port 5433 failed: FATAL:  password authentication failed for user "adform_user"
+
+(Background on this error at: https://sqlalche.me/e/14/e3q8)
+2025-01-24 07:51:09,104 - [INFO] - Starting application...
+2025-01-24 07:51:09,290 - [ERROR] - Error ensuring schema: (psycopg2.OperationalError) connection to server at "localhost" (::1), port 5433 failed: FATAL:  password authentication failed for user "adform_user"
+
+(Background on this error at: https://sqlalche.me/e/14/e3q8)
+2025-01-24 07:53:11,766 - [INFO] - Starting application...
+2025-01-24 07:53:11,847 - [INFO] - Database schema and tables verified/created successfully
+2025-01-24 07:53:44,970 - [INFO] - Spark Session created successfully
+2025-01-24 07:53:44,971 - [INFO] - Spark version: 3.5.4
+2025-01-24 07:53:44,971 - [INFO] - Spark master: local[*]
+2025-01-24 07:53:44,971 - [INFO] - Spark app name: ImpressionClickCounterApp
+2025-01-24 07:53:44,971 - [INFO] - Starting file processing...
+2025-01-24 07:53:44,971 - [INFO] - Input path: C:/Users/Rokas/Documents/Airidas/adform/adform_spark_app/raw_data
+2025-01-24 07:53:44,971 - [INFO] - Output path: C:/Users/Rokas/Documents/Airidas/adform/adform_spark_app/output
+2025-01-24 07:53:44,971 - [INFO] - User agent filter: some user agent
+2025-01-24 07:53:44,972 - [INFO] - Found 11 total parquet files
+2025-01-24 07:53:44,972 - [INFO] - Impressions files by date: 2022-05-26, 2022-05-27
+2025-01-24 07:53:44,972 - [INFO] - Clicks files by date: 2022-05-27
+2025-01-24 07:53:50,420 - [INFO] - Distinct user agents in impressions: [Row(user_agent='some user agent')]
+2025-01-24 07:53:50,860 - [INFO] - Found 14 impressions for user agent: some user agent
+2025-01-24 07:53:52,565 - [INFO] - Processing file: file:///C:/Users/Rokas/Documents/Airidas/adform/adform_spark_app/raw_data/impressions_processed_dk_20220526193204695_172756391-172756397_0.parquet
+2025-01-24 07:53:53,000 - [INFO] - Found 0 records with invalid hours
+2025-01-24 07:53:53,350 - [INFO] - Hour distribution before aggregation: [Row(hour=19, count=10), Row(hour=11, count=4)]
+2025-01-24 07:53:53,690 - [INFO] - Aggregated hour distribution: [Row(hour=19, count=10, valid_count=10), Row(hour=11, count=4, valid_count=4)]
+2025-01-24 07:53:53,913 - [INFO] - Final hour distribution: [Row(hour=19, count=10), Row(hour=11, count=4)]
+2025-01-24 07:53:58,738 - [INFO] - Successfully wrote output to C:/Users/Rokas/Documents/Airidas/adform/adform_spark_app/output\task1_output_2022-05-26.csv
+2025-01-24 07:53:58,739 - [INFO] - Removed processed file: impressions_processed_dk_20220526113212045_172845633-172845636_1.parquet
+2025-01-24 07:53:58,739 - [INFO] - Removed processed file: impressions_processed_dk_20220526193204695_172756391-172756397_0.parquet
+2025-01-24 07:53:58,740 - [INFO] - Removed processed file: impressions_processed_dk_20220526193204903_172845709-172845711_1.parquet
+2025-01-24 07:53:58,740 - [INFO] - Successfully processed data for date: 2022-05-26
+2025-01-24 07:53:59,035 - [INFO] - Distinct user agents in impressions: [Row(user_agent='some user agent')]
+2025-01-24 07:53:59,194 - [INFO] - Found 10 impressions for user agent: some user agent
+2025-01-24 07:54:00,291 - [INFO] - Processing file: file:///C:/Users/Rokas/Documents/Airidas/adform/adform_spark_app/raw_data/impressions_processed_dk_20220527123154402_172845889-172845894_1.parquet
+2025-01-24 07:54:00,550 - [INFO] - Found 0 records with invalid hours
+2025-01-24 07:54:00,743 - [INFO] - Hour distribution before aggregation: [Row(hour=12, count=10)]
+2025-01-24 07:54:00,932 - [INFO] - Aggregated hour distribution: [Row(hour=12, count=10, valid_count=10)]
+2025-01-24 07:54:01,071 - [INFO] - Final hour distribution: [Row(hour=12, count=10)]
+2025-01-24 07:54:01,342 - [INFO] - Distinct user agents in clicks: [Row(user_agent='some user agent')]
+2025-01-24 07:54:01,480 - [INFO] - Found 30 clicks for user agent: some user agent
+2025-01-24 07:54:02,807 - [INFO] - Processing file: file:///C:/Users/Rokas/Documents/Airidas/adform/adform_spark_app/raw_data/clicks_processed_dk_20220527120143730_163587241-163587247_0.parquet
+2025-01-24 07:54:03,068 - [INFO] - Found 0 records with invalid hours
+2025-01-24 07:54:03,338 - [INFO] - Hour distribution before aggregation: [Row(hour=12, count=20), Row(hour=11, count=10)]
+2025-01-24 07:54:03,544 - [INFO] - Aggregated hour distribution: [Row(hour=12, count=20, valid_count=20), Row(hour=11, count=10, valid_count=10)]
+2025-01-24 07:54:03,818 - [INFO] - Final hour distribution: [Row(hour=12, count=20), Row(hour=11, count=10)]
+2025-01-24 07:54:07,899 - [WARNING] - Found records where clicks exceed impressions: 2022-05-27
+2025-01-24 07:54:08,587 - [INFO] - Successfully wrote output to C:/Users/Rokas/Documents/Airidas/adform/adform_spark_app/output\task1_output_2022-05-27.csv
+2025-01-24 07:54:08,588 - [INFO] - Removed processed file: impressions_processed_dk_20220527123154212_172756551-172756554_0.parquet
+2025-01-24 07:54:08,588 - [INFO] - Removed processed file: impressions_processed_dk_20220527123154402_172845889-172845894_1.parquet
+2025-01-24 07:54:08,589 - [INFO] - Removed processed file: clicks_processed_dk_20220527113145108_163644805-163644809_1.parquet
+2025-01-24 07:54:08,589 - [INFO] - Removed processed file: clicks_processed_dk_20220527113145201_163587236-163587240_0.parquet
+2025-01-24 07:54:08,590 - [INFO] - Removed processed file: clicks_processed_dk_20220527120143730_163587241-163587247_0.parquet
+2025-01-24 07:54:08,590 - [INFO] - Removed processed file: clicks_processed_dk_20220527120143900_163644810-163644812_1.parquet
+2025-01-24 07:54:08,591 - [INFO] - Removed processed file: clicks_processed_dk_20220527123154754_163644813-163644819_1.parquet
+2025-01-24 07:54:08,591 - [INFO] - Removed processed file: clicks_processed_dk_20220527123154813_163587248-163587250_0.parquet
+2025-01-24 07:54:08,591 - [INFO] - Successfully processed data for date: 2022-05-27
+2025-01-24 07:54:08,591 - [INFO] - Successfully processed 2 dates
+2025-01-24 07:54:08,591 - [INFO] - Starting client report loading process...
+2025-01-24 07:54:08,592 - [INFO] - Reading file: C:\Users\Rokas\Documents\Airidas\adform\adform_spark_app\output\task1_output_2022-05-26.csv
+2025-01-24 07:54:08,594 - [INFO] - Read CSV with shape: (24, 4)
+2025-01-24 07:54:08,609 - [INFO] - Data prepared successfully. Shape: (24, 4)
+2025-01-24 07:54:08,625 - [INFO] - Archived 0 unique rows
+2025-01-24 07:54:08,641 - [INFO] - Successfully loaded 48 rows
+2025-01-24 07:54:08,647 - [INFO] - Processed C:\Users\Rokas\Documents\Airidas\adform\adform_spark_app\output\task1_output_2022-05-26.csv:
+2025-01-24 07:54:08,647 - [INFO] - - Archived rows: 0
+2025-01-24 07:54:08,647 - [INFO] - - Loaded rows: 48
+2025-01-24 07:54:08,648 - [INFO] - Reading file: C:\Users\Rokas\Documents\Airidas\adform\adform_spark_app\output\task1_output_2022-05-27.csv
+2025-01-24 07:54:08,657 - [INFO] - Read CSV with shape: (24, 4)
+2025-01-24 07:54:08,662 - [INFO] - Data prepared successfully. Shape: (24, 4)
+2025-01-24 07:54:08,666 - [INFO] - Archived 0 unique rows
+2025-01-24 07:54:08,674 - [INFO] - Successfully loaded 48 rows
+2025-01-24 07:54:08,681 - [INFO] - Processed C:\Users\Rokas\Documents\Airidas\adform\adform_spark_app\output\task1_output_2022-05-27.csv:
+2025-01-24 07:54:08,681 - [INFO] - - Archived rows: 0
+2025-01-24 07:54:08,682 - [INFO] - - Loaded rows: 48
+2025-01-24 07:54:08,682 - [INFO] - 
+Verifying data load...
+2025-01-24 07:54:08,690 - [INFO] - Verification results: {'total_rows': 48, 'date_range': {'start': datetime.datetime(2022, 5, 26, 0, 0), 'end': datetime.datetime(2022, 5, 27, 23, 0)}, 'totals': {'impressions': Decimal('44'), 'clicks': Decimal('30')}}
+2025-01-24 07:54:08,691 - [INFO] - 
+Load Summary:
+2025-01-24 07:54:08,691 - [INFO] - Total files processed: 2
+2025-01-24 07:54:08,691 - [INFO] - Total rows loaded: 96
+2025-01-24 07:54:08,691 - [INFO] - 
+Date Range:
+2025-01-24 07:54:08,691 - [INFO] -   Start: 2022-05-26 00:00:00
+2025-01-24 07:54:08,691 - [INFO] -   End: 2022-05-27 23:00:00
+2025-01-24 07:54:08,691 - [INFO] - 
+Total Counts:
+2025-01-24 07:54:08,692 - [INFO] -   Impressions: 44
+2025-01-24 07:54:08,692 - [INFO] -   Clicks: 30
+2025-01-24 07:54:08,692 - [INFO] - 
+Client report loading completed successfully
+2025-01-24 07:54:08,692 - [INFO] - Processing and loading completed successfully
+2025-01-24 07:54:08,896 - [INFO] - Spark Session stopped
+2025-01-24 07:59:14,472 - [INFO] - Starting application...
+2025-01-24 07:59:14,539 - [INFO] - Database schema and tables verified/created successfully
+2025-01-24 07:59:40,449 - [INFO] - Spark Session created successfully
+2025-01-24 07:59:40,450 - [INFO] - Spark version: 3.5.4
+2025-01-24 07:59:40,450 - [INFO] - Spark master: local[*]
+2025-01-24 07:59:40,450 - [INFO] - Spark app name: ImpressionClickCounterApp
+2025-01-24 07:59:40,450 - [INFO] - Starting file processing...
+2025-01-24 07:59:40,450 - [INFO] - Input path: C:/Users/Rokas/Documents/Airidas/adform/adform_spark_app/raw_data
+2025-01-24 07:59:40,450 - [INFO] - Output path: C:/Users/Rokas/Documents/Airidas/adform/adform_spark_app/output
+2025-01-24 07:59:40,450 - [INFO] - User agent filter: some user agent
+2025-01-24 07:59:40,451 - [INFO] - Found 11 total parquet files
+2025-01-24 07:59:40,451 - [INFO] - Impressions files by date: 2022-05-26, 2022-05-27
+2025-01-24 07:59:40,451 - [INFO] - Clicks files by date: 2022-05-27
+2025-01-24 07:59:45,535 - [INFO] - Distinct user agents in impressions: [Row(user_agent='some user agent')]
+2025-01-24 07:59:46,003 - [INFO] - Found 14 impressions for user agent: some user agent
+2025-01-24 07:59:47,711 - [INFO] - Processing file: file:///C:/Users/Rokas/Documents/Airidas/adform/adform_spark_app/raw_data/impressions_processed_dk_20220526193204695_172756391-172756397_0.parquet
+2025-01-24 07:59:48,172 - [INFO] - Found 0 records with invalid hours
+2025-01-24 07:59:48,566 - [INFO] - Hour distribution before aggregation: [Row(hour=19, count=10), Row(hour=11, count=4)]
+2025-01-24 07:59:48,941 - [INFO] - Aggregated hour distribution: [Row(hour=19, count=10, valid_count=10), Row(hour=11, count=4, valid_count=4)]
+2025-01-24 07:59:49,220 - [INFO] - Final hour distribution: [Row(hour=19, count=10), Row(hour=11, count=4)]
+2025-01-24 07:59:53,896 - [INFO] - Successfully wrote output to C:/Users/Rokas/Documents/Airidas/adform/adform_spark_app/output\task1_output_2022-05-26.csv
+2025-01-24 07:59:53,897 - [INFO] - Removed processed file: impressions_processed_dk_20220526113212045_172845633-172845636_1.parquet
+2025-01-24 07:59:53,897 - [INFO] - Removed processed file: impressions_processed_dk_20220526193204695_172756391-172756397_0.parquet
+2025-01-24 07:59:53,898 - [INFO] - Removed processed file: impressions_processed_dk_20220526193204903_172845709-172845711_1.parquet
+2025-01-24 07:59:53,898 - [INFO] - Successfully processed data for date: 2022-05-26
+2025-01-24 07:59:54,176 - [INFO] - Distinct user agents in impressions: [Row(user_agent='some user agent')]
+2025-01-24 07:59:54,310 - [INFO] - Found 10 impressions for user agent: some user agent
+2025-01-24 07:59:55,383 - [INFO] - Processing file: file:///C:/Users/Rokas/Documents/Airidas/adform/adform_spark_app/raw_data/impressions_processed_dk_20220527123154402_172845889-172845894_1.parquet
+2025-01-24 07:59:55,641 - [INFO] - Found 0 records with invalid hours
+2025-01-24 07:59:55,823 - [INFO] - Hour distribution before aggregation: [Row(hour=12, count=10)]
+2025-01-24 07:59:56,088 - [INFO] - Aggregated hour distribution: [Row(hour=12, count=10, valid_count=10)]
+2025-01-24 07:59:56,293 - [INFO] - Final hour distribution: [Row(hour=12, count=10)]
+2025-01-24 07:59:56,584 - [INFO] - Distinct user agents in clicks: [Row(user_agent='some user agent')]
+2025-01-24 07:59:56,733 - [INFO] - Found 30 clicks for user agent: some user agent
+2025-01-24 07:59:58,098 - [INFO] - Processing file: file:///C:/Users/Rokas/Documents/Airidas/adform/adform_spark_app/raw_data/clicks_processed_dk_20220527120143730_163587241-163587247_0.parquet
+2025-01-24 07:59:58,395 - [INFO] - Found 0 records with invalid hours
+2025-01-24 07:59:58,625 - [INFO] - Hour distribution before aggregation: [Row(hour=12, count=20), Row(hour=11, count=10)]
+2025-01-24 07:59:58,794 - [INFO] - Aggregated hour distribution: [Row(hour=12, count=20, valid_count=20), Row(hour=11, count=10, valid_count=10)]
+2025-01-24 07:59:59,002 - [INFO] - Final hour distribution: [Row(hour=12, count=20), Row(hour=11, count=10)]
+2025-01-24 08:00:03,347 - [WARNING] - Found records where clicks exceed impressions: 2022-05-27
+2025-01-24 08:00:04,127 - [INFO] - Successfully wrote output to C:/Users/Rokas/Documents/Airidas/adform/adform_spark_app/output\task1_output_2022-05-27.csv
+2025-01-24 08:00:04,127 - [INFO] - Removed processed file: impressions_processed_dk_20220527123154212_172756551-172756554_0.parquet
+2025-01-24 08:00:04,128 - [INFO] - Removed processed file: impressions_processed_dk_20220527123154402_172845889-172845894_1.parquet
+2025-01-24 08:00:04,128 - [INFO] - Removed processed file: clicks_processed_dk_20220527113145108_163644805-163644809_1.parquet
+2025-01-24 08:00:04,129 - [INFO] - Removed processed file: clicks_processed_dk_20220527113145201_163587236-163587240_0.parquet
+2025-01-24 08:00:04,129 - [INFO] - Removed processed file: clicks_processed_dk_20220527120143730_163587241-163587247_0.parquet
+2025-01-24 08:00:04,130 - [INFO] - Removed processed file: clicks_processed_dk_20220527120143900_163644810-163644812_1.parquet
+2025-01-24 08:00:04,130 - [INFO] - Removed processed file: clicks_processed_dk_20220527123154754_163644813-163644819_1.parquet
+2025-01-24 08:00:04,131 - [INFO] - Removed processed file: clicks_processed_dk_20220527123154813_163587248-163587250_0.parquet
+2025-01-24 08:00:04,131 - [INFO] - Successfully processed data for date: 2022-05-27
+2025-01-24 08:00:04,131 - [INFO] - Successfully processed 2 dates
+2025-01-24 08:00:04,131 - [INFO] - Starting client report loading process...
+2025-01-24 08:00:04,132 - [INFO] - Reading file: C:\Users\Rokas\Documents\Airidas\adform\adform_spark_app\output\task1_output_2022-05-26.csv
+2025-01-24 08:00:04,134 - [INFO] - Read CSV with shape: (24, 4)
+2025-01-24 08:00:04,145 - [INFO] - Data prepared successfully. Shape: (24, 4)
+2025-01-24 08:00:04,151 - [INFO] - Archived 0 unique rows
+2025-01-24 08:00:04,166 - [INFO] - Successfully loaded 48 rows
+2025-01-24 08:00:04,172 - [INFO] - Processed C:\Users\Rokas\Documents\Airidas\adform\adform_spark_app\output\task1_output_2022-05-26.csv:
+2025-01-24 08:00:04,172 - [INFO] - - Archived rows: 0
+2025-01-24 08:00:04,173 - [INFO] - - Loaded rows: 48
+2025-01-24 08:00:04,173 - [INFO] - Reading file: C:\Users\Rokas\Documents\Airidas\adform\adform_spark_app\output\task1_output_2022-05-27.csv
+2025-01-24 08:00:04,176 - [INFO] - Read CSV with shape: (24, 4)
+2025-01-24 08:00:04,182 - [INFO] - Data prepared successfully. Shape: (24, 4)
+2025-01-24 08:00:04,184 - [INFO] - Archived 0 unique rows
+2025-01-24 08:00:04,193 - [INFO] - Successfully loaded 48 rows
+2025-01-24 08:00:04,199 - [INFO] - Processed C:\Users\Rokas\Documents\Airidas\adform\adform_spark_app\output\task1_output_2022-05-27.csv:
+2025-01-24 08:00:04,199 - [INFO] - - Archived rows: 0
+2025-01-24 08:00:04,199 - [INFO] - - Loaded rows: 48
+2025-01-24 08:00:04,199 - [INFO] - 
+Verifying data load...
+2025-01-24 08:00:04,204 - [INFO] - Verification results: {'total_rows': 48, 'date_range': {'start': datetime.datetime(2022, 5, 26, 0, 0), 'end': datetime.datetime(2022, 5, 27, 23, 0)}, 'totals': {'impressions': Decimal('44'), 'clicks': Decimal('30')}}
+2025-01-24 08:00:04,205 - [INFO] - 
+Load Summary:
+2025-01-24 08:00:04,205 - [INFO] - Total files processed: 2
+2025-01-24 08:00:04,205 - [INFO] - Total rows loaded: 96
+2025-01-24 08:00:04,205 - [INFO] - 
+Date Range:
+2025-01-24 08:00:04,205 - [INFO] -   Start: 2022-05-26 00:00:00
+2025-01-24 08:00:04,205 - [INFO] -   End: 2022-05-27 23:00:00
+2025-01-24 08:00:04,205 - [INFO] - 
+Total Counts:
+2025-01-24 08:00:04,206 - [INFO] -   Impressions: 44
+2025-01-24 08:00:04,206 - [INFO] -   Clicks: 30
+2025-01-24 08:00:04,206 - [INFO] - 
+Client report loading completed successfully
+2025-01-24 08:00:04,206 - [INFO] - Processing and loading completed successfully
+2025-01-24 08:00:05,348 - [INFO] - Spark Session stopped

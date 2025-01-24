@@ -5,8 +5,6 @@ import unittest
 import logging
 from pyspark.sql import SparkSession, Row
 from pyspark.sql.types import StructType, StructField, StringType, IntegerType
-
-# Adjust the import based on your project structure
 from src.Task1.data_processing import DataProcessor
 
 

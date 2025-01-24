@@ -183,23 +183,10 @@ The deployment script automatically:
 - **Logging**: Detailed logs in `/logs/app.log`
 - **Coverage report metrics**: 61% Detailed test eeport `htmReport/index.html` 
 
-
 ## 🧪 Testing
 ```bash
 python -m pytest tests/
 ```
-
-## 🤝 Contributing
-1. Fork the repository
-2. Create a feature branch
-3. Submit a Pull Request
-
-## 📝 Project Progress
-To add your project planning visualization:
-1. Take a screenshot of your Trello board
-2. Save it as `project_planning.png`
-3. Place it in the project root directory
-4. The image will automatically appear in this section
 
 ## 📚 Documentation Resources
 - **Resources**: Books, YouTube channels, DataCamp and Codecademy
