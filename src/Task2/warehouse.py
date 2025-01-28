@@ -184,7 +184,7 @@ class ClientReportETL:
         issues = []
         df_copy = df.copy()
 
-        # 1) Zero impressions but has clicks
+        # 1) Identify records with zero impressions but has clicks
         zero_impressions_mask = (df_copy['impression_count'] == 0) & (
             df_copy['click_count'] > 0)
         if zero_impressions_mask.any():
@@ -198,13 +198,14 @@ class ClientReportETL:
                 })
 
             if self.auto_correct:
+                # Auto-correct by setting impressions equal to clicks where impressions are zero
                 df_copy.loc[zero_impressions_mask,
                             'impression_count'] = df_copy.loc[zero_impressions_mask, 'click_count']
                 self.logger.warning(
                     f"Auto-corrected {zero_impressions_mask.sum()} records with clicks but no impressions."
                 )
 
-        # 2) clicks > impressions
+        # 2) Identify records where clicks exceed impressions but impressions are greater than zero
         excess_clicks_mask = (df_copy['click_count'] > df_copy['impression_count']) & \
                              (df_copy['impression_count'] > 0)
         if excess_clicks_mask.any():
@@ -218,13 +219,14 @@ class ClientReportETL:
                 })
 
             if self.auto_correct:
+                # Auto-correct by setting clicks equal to impressions where clicks exceed impressions
                 df_copy.loc[excess_clicks_mask,
                             'click_count'] = df_copy.loc[excess_clicks_mask, 'impression_count']
                 self.logger.warning(
                     f"Auto-corrected {excess_clicks_mask.sum()} records where clicks exceeded impressions."
                 )
 
-        # 3) impressions > clicks (jei norėtumėte laikyti neatitikimu)
+        # 3) Identify records where impressions exceed clicks (if you want to track this discrepancy)
         more_impressions_mask = (df_copy['impression_count'] > df_copy['click_count']) & (
             df_copy['click_count'] > 0)
         if more_impressions_mask.any():
@@ -236,18 +238,21 @@ class ClientReportETL:
                     'issue_type': 'impressions_exceed_clicks',
                     'source_file': source_file
                 })
-            # Jei norite auto-correct, pridėkite čia
-
-        # Jei turime issue’ų, juos išsaugome "client_report_invalid" lentelėje
         if issues:
+            # Create a DataFrame for the identified issues
             issues_df = pd.DataFrame(issues)
+            # Rename 'issue_type' column to 'validation_error' for consistency
             issues_df.rename(
                 columns={'issue_type': 'validation_error'}, inplace=True)
+            # Ensure 'datetime' column is in datetime format
             issues_df['datetime'] = pd.to_datetime(issues_df['datetime'])
+            # Add a timestamp for when the issues were loaded
             issues_df['audit_loaded_datetime'] = datetime.now()
 
+            # Store the invalid records for further analysis
             self.store_invalid_records(issues_df)
 
+        # Return the potentially corrected DataFrame and list of issues
         return df_copy, issues
 
     def store_invalid_records(self, invalid_records: pd.DataFrame):
@@ -276,7 +281,7 @@ class ClientReportETL:
                     'client_report_invalid_staging',
                     conn,
                     schema='adform_dw',
-                    if_exists='replace',  # perrašome kiekvieną kartą, tinka mini-batch scenarijui
+                    if_exists='replace',
                     index=False,
                     method='multi'
                 )
@@ -404,15 +409,15 @@ class ClientReportETL:
             # Prepare data
             prepared_df = self.prepare_data(df)
 
-            # (Galima) Čia galite iškviesti validate_data arba _handle_click_impression_mismatch,
-            # jei norite aptikti mismatch dar prieš kraunant į client_report.
-            # pvz.:
+            # Validate the prepared DataFrame to ensure data quality
             validated = self.validate_data(
                 prepared_df, source_file=str(input_path))
+
+            # If there are invalid records, store them for further analysis
             if validated.invalid_records is not None:
                 self.store_invalid_records(validated.invalid_records)
-            #
-            # Arba rely on your pipeline to do that earlier.
+
+            # Alternatively, validation can be handled earlier in the data pipeline
 
             with self.engine.begin() as conn:
                 # 1. Archive existing data for the dates in this file
