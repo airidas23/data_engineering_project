@@ -19,6 +19,17 @@ CREATE TABLE IF NOT EXISTS adform_dw.client_report_archive (
     LIKE adform_dw.client_report INCLUDING ALL
 );
 
+-- Create the client report invalid table
+CREATE TABLE IF NOT EXISTS adform_dw.client_report_invalid (
+    datetime TIMESTAMP NOT NULL,
+    impression_count BIGINT NOT NULL,
+    click_count BIGINT NOT NULL,
+    audit_loaded_datetime TIMESTAMP NOT NULL,
+    validation_error TEXT NOT NULL,
+    source_file TEXT NOT NULL,
+    PRIMARY KEY (datetime, source_file)
+);
+
 -- Grant necessary permissions
 GRANT ALL PRIVILEGES ON SCHEMA adform_dw TO adform_user;
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA adform_dw TO adform_user;

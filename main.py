@@ -1,4 +1,3 @@
-
 import os
 import sys
 import argparse
@@ -22,20 +21,20 @@ os.environ['PATH'] += os.pathsep + python_dir
 load_dotenv()
 
 
-def setup_java_home():
-    """Verify and setup JAVA_HOME."""
-    if 'JAVA_HOME' not in os.environ:
-        # Try to find Java installation
-        possible_paths = [
-            r"C:\Program Files\Java\jdk-11"
-        ]
-        for path in possible_paths:
-            if os.path.exists(path):
-                os.environ['JAVA_HOME'] = path
-                break
-        if 'JAVA_HOME' not in os.environ:
-            raise EnvironmentError(
-                "JAVA_HOME is not set and couldn't be found automatically")
+# def setup_java_home():
+#     """Verify and setup JAVA_HOME."""
+#     if 'JAVA_HOME' not in os.environ:
+#         # Try to find Java installation
+#         possible_paths = [
+#             r"C:\Program Files\Java\jdk-11"
+#         ]
+#         for path in possible_paths:
+#             if os.path.exists(path):
+#                 os.environ['JAVA_HOME'] = path
+#                 break
+#         if 'JAVA_HOME' not in os.environ:
+#             raise EnvironmentError(
+#                 "JAVA_HOME is not set and couldn't be found automatically")
 
 
 def setup_hadoop_env():
@@ -58,7 +57,7 @@ def setup_hadoop_env():
 
 
 def create_spark_session():
-    """Create and configure Spark session with enhanced settings."""
+    """Create and configure Spark session with enhanced settings for both local and Docker environments."""
     conf = SparkConf()
 
     # Memory and executor configurations
@@ -76,50 +75,97 @@ def create_spark_session():
     conf.set("spark.default.parallelism", "2")
     conf.set("spark.sql.adaptive.enabled", "true")
 
-    # Windows-specific configurations
-    conf.set("spark.driver.host", "localhost")
-    conf.set("spark.driver.bindAddress", "localhost")
+    # Detect if running in Docker
+    in_docker = os.path.exists('/.dockerenv')
 
-    # Set Python interpreter to the current Python executable
+    if in_docker:
+        # Docker-specific configurations
+        # Remove or comment out the following lines
+        # conf.set("spark.driver.host", "adform_spark")
+        # conf.set("spark.driver.bindAddress", "0.0.0.0")
+        logging.info("Configuring Spark for Docker environment (local mode)")
+    else:
+        # Local development configurations
+        conf.set("spark.driver.host", "localhost")
+        conf.set("spark.driver.bindAddress", "localhost")
+        logging.info("Configuring Spark for local environment")
+
+    # Set Python interpreter
     conf.set("spark.pyspark.python", sys.executable)
     conf.set("spark.pyspark.driver.python", sys.executable)
-
-    # Set environment variables to ensure Spark uses the correct Python interpreter
     os.environ['PYSPARK_PYTHON'] = sys.executable
     os.environ['PYSPARK_DRIVER_PYTHON'] = sys.executable
 
     # Port and logging settings
     conf.set("spark.ui.port", "4050")
+
+    # Handle Hadoop permissions if needed
     if os.name == "nt" and os.environ.get('HADOOP_HOME'):
         subprocess.run([
             os.path.join(os.environ['HADOOP_HOME'], "bin", "winutils.exe"),
             "chmod", "777", str(Path(INPUT_PATH).resolve())
         ])
 
-    # Create Spark session
+    # Create and configure Spark session
     spark = SparkSession.builder \
         .appName("ImpressionClickCounterApp") \
         .config(conf=conf) \
         .master("local[*]") \
         .getOrCreate()
 
-    # Set global log level to ERROR
+    # Configure logging
     spark.sparkContext.setLogLevel("ERROR")
 
-    # Suppress ShutdownHookManager warnings specifically
+    # Suppress ShutdownHookManager warnings
     jvm = spark._jvm
     shutdown_logger = jvm.org.apache.log4j.LogManager.getLogger(
         "org.apache.spark.util.ShutdownHookManager")
     shutdown_logger.setLevel(jvm.org.apache.log4j.Level.ERROR)
 
+    # Log Spark configuration for debugging
+    logging.info(f"Created Spark session:")
+    logging.info(f"  Version: {spark.version}")
+    logging.info(f"  Master: {spark.sparkContext.master}")
+    logging.info(f"  App Name: {spark.sparkContext.appName}")
+    logging.info(
+        f"  Driver Host: {conf.get('spark.driver.host') if not in_docker else 'N/A'}")
+
     return spark
 
 
 def get_warehouse_connection():
-    """Get database connection string from environment variables."""
-    return f"postgresql://{os.getenv('POSTGRES_USER', 'adform_user')}:{os.getenv('POSTGRES_PASSWORD', 'adform_pass')}" \
-           f"@{os.getenv('DB_HOST', 'localhost')}:{os.getenv('DB_PORT', '5433')}" \
-           f"/{os.getenv('POSTGRES_DB', 'adform_db')}"
+    """
+    Get database connection string from environment variables with enhanced logging
+    and Docker network support.
+    """
+    # Get connection parameters from environment
+    # Default to 'postgres' for Docker networking
+    host = os.getenv('DB_HOST', 'postgres')
+    port = os.getenv('DB_PORT', '5432')
+    db = os.getenv('POSTGRES_DB', 'adform_db')
+    user = os.getenv('POSTGRES_USER', 'adform_user')
+    password = os.getenv('POSTGRES_PASSWORD', 'adform_pass')
+
+    # Build connection string
+    connection_string = f"postgresql://{user}:{password}@{host}:{port}/{db}"
+
+    # Log connection attempt details (without password)
+    logging.info(f"Database connection details:")
+    logging.info(f"Host: {host}")
+    logging.info(f"Port: {port}")
+    logging.info(f"Database: {db}")
+    logging.info(f"User: {user}")
+
+    # Test if we're running in Docker
+    in_docker = os.path.exists('/.dockerenv')
+    logging.info(f"Running in Docker container: {in_docker}")
+
+    # If we're in Docker but host is localhost, warn about potential misconfiguration
+    if in_docker and host == 'localhost':
+        logging.warning("Running in Docker but trying to connect to localhost! "
+                        "Should probably be connecting to 'postgres' instead.")
+
+    return connection_string
 
 
 def ensure_directories():
@@ -211,7 +257,7 @@ def process_and_load_data(spark, etl, input_path: str, output_path: str, user_ag
 def main(args=None):
     try:
         # Setup environment
-        setup_java_home()
+        # setup_java_home()
         setup_hadoop_env()
         ensure_directories()
 

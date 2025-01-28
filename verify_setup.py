@@ -31,7 +31,6 @@ class SetupVerification:
             'logs',
             'output/raw_data',
             'src/Task2',
-            'src/models',
             'tests'
         ]
         self.required_files = [

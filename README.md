@@ -181,7 +181,7 @@ The deployment script automatically:
 
 ## 📈 Performance Monitoring
 - **Logging**: Detailed logs in `/logs/app.log`
-- **Coverage report metrics**: 61% Detailed test eeport `htmReport/index.html` 
+- **Coverage report metrics**: 61% Detailed test report `htmReport/index.html` 
 
 ## 🧪 Testing
 ```bash

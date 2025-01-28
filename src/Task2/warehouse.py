@@ -1,13 +1,3 @@
-
-import logging
-from pathlib import Path
-from datetime import datetime
-import pandas as pd
-from sqlalchemy import create_engine, text
-from sqlalchemy.exc import SQLAlchemyError
-import numpy as np
-from typing import Optional, List, Dict, Tuple
-
 import logging
 from pathlib import Path
 from datetime import datetime
@@ -44,7 +34,7 @@ class ClientReportETL:
             pool_recycle=1800
         )
         self.logger = logger
-        self.auto_correct = auto_correct
+        self.auto_correct = False
         self._ensure_schema()
 
     def _ensure_schema(self):
@@ -131,7 +121,8 @@ class ClientReportETL:
                 df[null_mask].assign(validation_error='Contains null values')
             ])
             warnings.append(
-                f"Found {null_mask.sum()} records with null values")
+                f"Found {null_mask.sum()} records with null values"
+            )
 
         # Check for negative values
         negative_mask = (df['impression_count'] < 0) | (df['click_count'] < 0)
@@ -139,10 +130,12 @@ class ClientReportETL:
             problematic_records = pd.concat([
                 problematic_records,
                 df[negative_mask].assign(
-                    validation_error='Contains negative values')
+                    validation_error='Contains negative values'
+                )
             ])
             warnings.append(
-                f"Found {negative_mask.sum()} records with negative values")
+                f"Found {negative_mask.sum()} records with negative values"
+            )
 
         # Check for clicks exceeding impressions
         invalid_clicks_mask = df['click_count'] > df['impression_count']
@@ -155,7 +148,7 @@ class ClientReportETL:
                 ]
                 warnings.append(
                     f"Auto-corrected {invalid_clicks_mask.sum()} records where "
-                    "clicks exceeded impressions"
+                    "clicks exceeded impressions."
                 )
             else:
                 problematic_records = pd.concat([
@@ -185,78 +178,146 @@ class ClientReportETL:
 
     def _handle_click_impression_mismatch(self, df: pd.DataFrame, source_file: str) -> Tuple[pd.DataFrame, List[Dict]]:
         """
-        Handle cases where clicks exceed impressions or exist without impressions.
-        Returns corrected dataframe and list of issues for logging.
+        Handle cases where clicks exceed impressions OR impressions exceed clicks.
+        Returns corrected dataframe (if auto_correct is enabled) and list of issues for logging/storing.
         """
         issues = []
         df_copy = df.copy()
 
-        # Find records where clicks exist but impressions are 0
+        # 1) Zero impressions but has clicks
         zero_impressions_mask = (df_copy['impression_count'] == 0) & (
             df_copy['click_count'] > 0)
         if zero_impressions_mask.any():
             for _, row in df_copy[zero_impressions_mask].iterrows():
                 issues.append({
-                    'date': pd.to_datetime(row['date']).date(),
-                    'hour': row['hour'],
+                    'datetime': row['datetime'],
                     'impression_count': row['impression_count'],
                     'click_count': row['click_count'],
                     'issue_type': 'clicks_without_impressions',
-                    'resolution': 'set_impressions_equal_to_clicks' if self.auto_correct else 'flagged',
                     'source_file': source_file
                 })
 
             if self.auto_correct:
-                # Set impressions equal to clicks where impressions are 0
-                df_copy.loc[zero_impressions_mask, 'impression_count'] = df_copy.loc[
-                    zero_impressions_mask, 'click_count'
-                ]
+                df_copy.loc[zero_impressions_mask,
+                            'impression_count'] = df_copy.loc[zero_impressions_mask, 'click_count']
                 self.logger.warning(
-                    f"Auto-corrected {zero_impressions_mask.sum()} records with "
-                    "clicks but no impressions"
+                    f"Auto-corrected {zero_impressions_mask.sum()} records with clicks but no impressions."
                 )
 
-        # Find records where clicks exceed impressions
-        excess_clicks_mask = (df_copy['click_count'] > df_copy['impression_count']) & (
-            df_copy['impression_count'] > 0)
+        # 2) clicks > impressions
+        excess_clicks_mask = (df_copy['click_count'] > df_copy['impression_count']) & \
+                             (df_copy['impression_count'] > 0)
         if excess_clicks_mask.any():
             for _, row in df_copy[excess_clicks_mask].iterrows():
                 issues.append({
-                    'date': pd.to_datetime(row['date']).date(),
-                    'hour': row['hour'],
+                    'datetime': row['datetime'],
                     'impression_count': row['impression_count'],
                     'click_count': row['click_count'],
                     'issue_type': 'clicks_exceed_impressions',
-                    'resolution': 'set_clicks_equal_to_impressions' if self.auto_correct else 'flagged',
                     'source_file': source_file
                 })
 
             if self.auto_correct:
-                # Set clicks equal to impressions where they exceed
-                df_copy.loc[excess_clicks_mask, 'click_count'] = df_copy.loc[
-                    excess_clicks_mask, 'impression_count'
-                ]
+                df_copy.loc[excess_clicks_mask,
+                            'click_count'] = df_copy.loc[excess_clicks_mask, 'impression_count']
                 self.logger.warning(
-                    f"Auto-corrected {excess_clicks_mask.sum()} records where "
-                    "clicks exceeded impressions"
+                    f"Auto-corrected {excess_clicks_mask.sum()} records where clicks exceeded impressions."
                 )
+
+        # 3) impressions > clicks (jei norėtumėte laikyti neatitikimu)
+        more_impressions_mask = (df_copy['impression_count'] > df_copy['click_count']) & (
+            df_copy['click_count'] > 0)
+        if more_impressions_mask.any():
+            for _, row in df_copy[more_impressions_mask].iterrows():
+                issues.append({
+                    'datetime': row['datetime'],
+                    'impression_count': row['impression_count'],
+                    'click_count': row['click_count'],
+                    'issue_type': 'impressions_exceed_clicks',
+                    'source_file': source_file
+                })
+            # Jei norite auto-correct, pridėkite čia
+
+        # Jei turime issue’ų, juos išsaugome "client_report_invalid" lentelėje
+        if issues:
+            issues_df = pd.DataFrame(issues)
+            issues_df.rename(
+                columns={'issue_type': 'validation_error'}, inplace=True)
+            issues_df['datetime'] = pd.to_datetime(issues_df['datetime'])
+            issues_df['audit_loaded_datetime'] = datetime.now()
+
+            self.store_invalid_records(issues_df)
 
         return df_copy, issues
 
     def store_invalid_records(self, invalid_records: pd.DataFrame):
-        """Store invalid records in the invalid records table for later analysis."""
+        """
+        Store invalid records in the invalid records table for later analysis,
+        using an UPSERT (merge) approach to avoid duplicates on (datetime, source_file).
+
+        Args:
+            invalid_records: DataFrame containing invalid records to be stored. 
+                             Expected columns are:
+                             - datetime: Timestamp of the record
+                             - impression_count: Number of impressions
+                             - click_count: Number of clicks
+                             - audit_loaded_datetime: Timestamp when the record was loaded
+                             - validation_error: Description of the validation error
+                             - source_file: Name of the source file from which the record originated
+        """
+        if invalid_records.empty:
+            return
+
         try:
             with self.engine.begin() as conn:
+                # 1) Load into a temporary table (e.g., client_report_invalid_staging).
+                #    if_exists='replace' -> creates/replaces the temporary table each time.
                 invalid_records.to_sql(
-                    'client_report_invalid',
+                    'client_report_invalid_staging',
                     conn,
                     schema='adform_dw',
-                    if_exists='append',
+                    if_exists='replace',  # perrašome kiekvieną kartą, tinka mini-batch scenarijui
                     index=False,
                     method='multi'
                 )
+
+                # 2) Perform "upsert" from the temporary table to the main table
+                #    POSTGRES syntax: ON CONFLICT (datetime, source_file) DO UPDATE ...
+                upsert_sql = text("""
+                    INSERT INTO adform_dw.client_report_invalid (
+                        datetime,
+                        impression_count,
+                        click_count,
+                        audit_loaded_datetime,
+                        validation_error,
+                        source_file
+                    )
+                    SELECT 
+                        CAST(s.datetime AS timestamp),
+                        s.impression_count,
+                        s.click_count,
+                        CAST(s.audit_loaded_datetime AS timestamp),
+                        s.validation_error,
+                        s.source_file
+                    FROM adform_dw.client_report_invalid_staging s
+                    ON CONFLICT (datetime, source_file)
+                    DO UPDATE 
+                       SET impression_count     = EXCLUDED.impression_count,
+                           click_count         = EXCLUDED.click_count,
+                           audit_loaded_datetime = EXCLUDED.audit_loaded_datetime,
+                           validation_error    = EXCLUDED.validation_error;
+                """)
+
+                # 3) Execute the upsert
+                conn.execute(upsert_sql)
+
+                # (Optional) Drop the temporary table
+                # If you want to keep the table for debugging, you can leave it
+                conn.execute(
+                    text("DROP TABLE IF EXISTS adform_dw.client_report_invalid_staging;"))
+
             self.logger.info(
-                f"Stored {len(invalid_records)} invalid records for later analysis"
+                f"Upsert completed: stored/updated {len(invalid_records)} invalid records in client_report_invalid."
             )
         except Exception as e:
             self.logger.error(f"Error storing invalid records: {str(e)}")
@@ -272,7 +333,6 @@ class ClientReportETL:
         Returns:
             Prepared DataFrame with properly formatted datetime column
         """
-        # Create a copy to avoid modifying the input
         prepared_df = df.copy()
 
         try:
@@ -344,13 +404,21 @@ class ClientReportETL:
             # Prepare data
             prepared_df = self.prepare_data(df)
 
-            # Load to database with safe archiving
+            # (Galima) Čia galite iškviesti validate_data arba _handle_click_impression_mismatch,
+            # jei norite aptikti mismatch dar prieš kraunant į client_report.
+            # pvz.:
+            validated = self.validate_data(
+                prepared_df, source_file=str(input_path))
+            if validated.invalid_records is not None:
+                self.store_invalid_records(validated.invalid_records)
+            #
+            # Arba rely on your pipeline to do that earlier.
+
             with self.engine.begin() as conn:
-                # First, archive existing data for the dates in this file
+                # 1. Archive existing data for the dates in this file
                 min_date = prepared_df['datetime'].min()
                 max_date = prepared_df['datetime'].max()
 
-                # Archive records for the current date range
                 archive_query = text("""
                     INSERT INTO adform_dw.client_report_archive (
                         datetime, impression_count, click_count, audit_loaded_datetime
@@ -368,18 +436,20 @@ class ClientReportETL:
                     archive_query,
                     {"min_date": min_date, "max_date": max_date}
                 )
-                archived_rows = archive_result.rowcount
+                archived_rows = archive_result.rowcount or 0
                 self.logger.info(f"Archived {archived_rows} unique rows")
 
-                # Remove existing records for the current date range
+                # 2. Remove existing records for the current date range (to avoid duplicates in client_report)
                 delete_query = text("""
                     DELETE FROM adform_dw.client_report
                     WHERE datetime BETWEEN :min_date AND :max_date;
                 """)
                 conn.execute(delete_query, {
-                             "min_date": min_date, "max_date": max_date})
+                    "min_date": min_date,
+                    "max_date": max_date
+                })
 
-                # Insert new data
+                # 3. Insert new data
                 prepared_df.to_sql(
                     'client_report',
                     conn,
@@ -390,18 +460,16 @@ class ClientReportETL:
                     chunksize=1000
                 )
 
-                # Verify loaded rows for this date range
+                # 4. Verify loaded rows
                 verify_query = text("""
                     SELECT COUNT(*) 
-                    FROM adform_dw.client_report
-                    ;
+                    FROM adform_dw.client_report;
                 """)
-                loaded_rows = conn.execute(
-                    verify_query,
-                    {"min_date": min_date, "max_date": max_date}
-                ).scalar()
+                loaded_rows = conn.execute(verify_query).scalar()
+                loaded_rows = loaded_rows if loaded_rows else 0
 
-                self.logger.info(f"Successfully loaded {loaded_rows} rows")
+                self.logger.info(
+                    f"Successfully loaded {loaded_rows} rows into client_report.")
                 return {
                     'archived_rows': archived_rows,
                     'loaded_rows': loaded_rows

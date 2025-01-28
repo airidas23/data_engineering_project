@@ -4,8 +4,7 @@ from pyspark.sql.types import StructType, StructField, IntegerType
 import os
 from typing import Tuple, Optional, List, Dict
 import logging
-from datetime import datetime
-
+import datetime
 
 
 class DataProcessor:
@@ -299,8 +298,8 @@ class DataProcessor:
 
     def _combine_and_fill_hours(self, impressions_df: DataFrame, clicks_df: DataFrame, date: str) -> DataFrame:
         """
-        Combine impression and click counts with enhanced formatting.
-        Ensures consistent date and time formatting in the output.
+        Combine impression and click counts with enhanced validation and correction.
+        Ensures data consistency by properly handling cases where clicks exceed impressions.
         """
         try:
             # Create base hours DataFrame
@@ -338,31 +337,30 @@ class DataProcessor:
             # Fill nulls
             result_df = hours_df.na.fill(0)
 
-            # Handle clicks exceeding impressions
+
+
+            # Identify and handle cases where clicks exceed impressions
             clicks_exceed_mask = F.col(
                 "click_count") > F.col("impression_count")
-            if not result_df.filter(clicks_exceed_mask).rdd.isEmpty():
+
+            # Count problematic records before correction
+            problem_records = result_df.filter(clicks_exceed_mask)
+            if not problem_records.rdd.isEmpty():
                 self.logger.warning(
-                    f"Found records where clicks exceed impressions: {date}"
-                )
-                result_df.filter(clicks_exceed_mask).show()
+                    "Found records where clicks exceed impressions:")
+                problem_records.show()
 
-                # Set impressions equal to clicks where clicks are higher
-                result_df = result_df.withColumn(
-                    "impression_count",
-                    F.when(clicks_exceed_mask, F.col("click_count"))
-                    .otherwise(F.col("impression_count"))
-                )
+                # # Set impressions equal to clicks where clicks are higher
+                # result_df = result_df.withColumn(
+                #     "impression_count",
+                #     F.when(clicks_exceed_mask, F.col("click_count"))
+                #     .otherwise(F.col("impression_count"))
+                # )
 
-            # Add formatted date column first in the output
+            # Prepare final output
             return result_df \
                 .withColumn("date", F.lit(date)) \
-                .select(
-                    "date",
-                    "hour",
-                    "impression_count",
-                    "click_count"
-                ) \
+                .select("date", "hour", "impression_count", "click_count") \
                 .orderBy("hour")
 
         except Exception as e:
@@ -375,7 +373,7 @@ class DataProcessor:
             parts = filename.split('_')
             datetime_part = parts[3]  # e.g., 20220527113145108
             date_str = datetime_part[:8]  # 20220527
-            date_obj = datetime.strptime(date_str, '%Y%m%d')
+            date_obj = datetime.datetime.strptime(date_str, '%Y%m%d')
             return date_obj.strftime('%Y-%m-%d')  # Return only date part
         except Exception as e:
             self.logger.error(

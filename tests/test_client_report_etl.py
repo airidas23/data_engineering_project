@@ -396,8 +396,9 @@ class TestCombineAndFillHours(unittest.TestCase):
         # Hour 12: Impressions = 10, clicks = 20 -> impressions adjusted to 20, clicks = 20
         self.assertIn(11, result, "Hour 11 is missing from the results.")
         self.assertIn(12, result, "Hour 12 is missing from the results.")
-        self.assertEqual(result[11], (10, 10), "Hour 11 counts are incorrect.")
-        self.assertEqual(result[12], (20, 20), "Hour 12 counts are incorrect.")
+
+        self.assertEqual(result[11], (0, 10), "Hour 11 counts are incorrect.")
+        self.assertEqual(result[12], (10, 20), "Hour 12 counts are incorrect.")
 
         # Check other hours
         for hour in range(0, 24):
@@ -513,8 +514,9 @@ class TestCombineAndFillHours(unittest.TestCase):
         # All others: (0, 0)
         self.assertIn(9, result, "Hour 9 is missing from the results.")
         self.assertIn(16, result, "Hour 16 is missing from the results.")
-        self.assertEqual(result[9], (15, 15), "Hour 9 counts are incorrect.")
-        self.assertEqual(result[16], (25, 25), "Hour 16 counts are incorrect.")
+
+        self.assertEqual(result[9], (0, 15), "Hour 9 counts are incorrect.")
+        self.assertEqual(result[16], (0, 25), "Hour 16 counts are incorrect.")
 
         # Check other hours
         for hour in range(0, 24):
