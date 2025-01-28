@@ -23,7 +23,6 @@ def get_logger(log_path: str) -> logging.Logger:
     return logger
 
 
-
 def parse_datetime_from_filename(filename: str) -> str:
     """
     Extract datetime from filename.

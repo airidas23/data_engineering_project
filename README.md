@@ -9,30 +9,48 @@ This project implements a **simple data processing pipeline** that handles impre
 
 ## 📂 Project Structure
 ```
-adform_spark_app/
-├── .cadence/               # Workflow configurations
-├── .venv/                  # Python virtual environment
-├── .vscode/                # VS Code configuration
+ADFORM_SPARK_APP/
+│
+├── .cadence/
+├── .idea/
+├── .pytest_cache/
+├── .venv/
+├── .vscode/
 ├── docker/
 │   ├── init/
-│   │   └── 01-init-db.sql  # Database initialization script
-│   ├── docker-compose.yml  # Docker services configuration
-│   └── Dockerfile.spark    # Spark container configuration
-├── hadoop/                 # Hadoop configuration for Windows
-├── init/                   # Additional initialization scripts
-├── jupyter_files/         # Jupyter notebooks for development
+│   │   ├── 01-init-db.sql
+│   │   ├── __init__.py
+│   └── docker-compose.yml
+├── hadoop/
+├── htmlReport/
+├── jupyter_files/
 ├── logs/
-│   └── app.log            # Application logging
-├── output/                # Processed data output
-│   ├── task1_output_2022-05-26
-│   ├── task1_output_2022-05-27
-│── raw_data/         # Input data directory
+├── output/
+├── raw_data/
 ├── src/
-│   ├── etl/              # ETL processing logic
-│   ├
-│   └── data_processing.py # Spark data processing
-├── tests/                # Unit tests
-└── [Configuration Files] # .env, config.py, etc.
+│   ├── Task1/
+│   │   ├── __init__.py
+│   │   └── data_processing.py
+│   ├── Task2/
+│   │   ├── __init__.py
+│   │   └── warehouse.py
+│   ├── __init__.py
+│   ├── utils.py
+│   
+├── tests/
+│   ├── __init__.py
+│   ├── test_client_report_etl.py
+│   └── test_data_processing.py
+├── .env
+├── .gitignore
+├── config.py
+├── deploy.sh
+├── main.py
+├── project_planning.png
+├── README.md
+└── verify_setup.py
+└── requirements.txt
+
 ```
 
 ## 🛠️ Prerequisites
@@ -42,6 +60,56 @@ adform_spark_app/
 - **Git**
 
 ## 🚀 Setup Instructions
+
+## ⚙️ Deployment Configuration
+
+### 🕒 Scheduled Execution
+The application supports different scheduling configurations through cron jobs. You can set the environment in your `.env` file:
+
+```bash
+# For production (runs every 6 hours)
+CRON_ENVIRONMENT=production
+
+# For development (runs every 5 minutes)
+CRON_ENVIRONMENT=development
+
+# For testing (runs every minute)
+CRON_ENVIRONMENT=testing
+```
+
+Schedule details:
+- **Production**: Runs at 00:00, 06:00, 12:00, and 18:00 (`0 */6 * * *`)
+- **Development**: Runs every 5 minutes (`*/5 * * * *`)
+- **Testing**: Runs every minute (`* * * * *`)
+
+### 🐳 Docker Configuration
+The application uses a multi-container setup with Docker Compose:
+
+```yaml
+services:
+  postgres:
+    image: postgres:14
+    container_name: adform_warehouse
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready" ]
+      interval: 10s
+
+  pyspark_processor:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: adform_spark
+    volumes:
+      - ../raw_data:/app/raw_data
+      - ../output:/app/output
+    depends_on:
+      postgres:
+        condition: service_healthy
+```
 
 ### 🪟 Windows Setup
 **Install Prerequisites**:
@@ -75,8 +143,16 @@ adform_spark_app/
    POSTGRES_PASSWORD=adform_pass
    POSTGRES_DB=adform_db
    DB_HOST=localhost
-   DB_PORT=5433
+   DB_PORT=5432
    ```
+   For docker-compose.yml file, use the following:
+    ```
+    POSTGRES_DB=adform_db
+    POSTGRES_USER=adform_user
+    POSTGRES_PASSWORD=adform_pass
+    DB_HOST=postgres
+    DB_PORT=5432
+    ```
 
 ### 🏃 Running the Application
 1. **Place input parquet files** in the raw_data directory
@@ -89,10 +165,8 @@ adform_spark_app/
 1. Install Prerequisites:
    ```bash
    # macOS (using Homebrew)
-   brew install python@3.8
-   brew install --cask docker
-   brew install openjdk@11
-   ```
+   brew ins105:    ```
+
 ### 🐧 Linux Deployment
 The application can be quickly deployed using our automated deployment script:
 
@@ -196,3 +270,5 @@ python -m pytest tests/
 ## 📅 Project Timeline
 - **Start Date**: 2025-01-17
 - **End Date**: 2025-01-23
+
+
