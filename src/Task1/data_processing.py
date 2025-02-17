@@ -337,8 +337,6 @@ class DataProcessor:
             # Fill nulls
             result_df = hours_df.na.fill(0)
 
-
-
             # Identify and handle cases where clicks exceed impressions
             clicks_exceed_mask = F.col(
                 "click_count") > F.col("impression_count")

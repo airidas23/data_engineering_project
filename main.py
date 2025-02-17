@@ -21,22 +21,6 @@ os.environ['PATH'] += os.pathsep + python_dir
 load_dotenv()
 
 
-# def setup_java_home():
-#     """Verify and setup JAVA_HOME."""
-#     if 'JAVA_HOME' not in os.environ:
-#         # Try to find Java installation
-#         possible_paths = [
-#             r"C:\Program Files\Java\jdk-11"
-#         ]
-#         for path in possible_paths:
-#             if os.path.exists(path):
-#                 os.environ['JAVA_HOME'] = path
-#                 break
-#         if 'JAVA_HOME' not in os.environ:
-#             raise EnvironmentError(
-#                 "JAVA_HOME is not set and couldn't be found automatically")
-
-
 def setup_hadoop_env():
     """Setup complete Hadoop environment for Windows."""
     # Set up base paths
